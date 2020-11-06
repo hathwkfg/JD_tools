@@ -1,10 +1,8 @@
-name: jd_farm_help
+name: 东东超市
 
 on:
   schedule:
-    - cron: '23 0 * * * '
-  watch:
-    types: [started]
+    - cron: '5 * * * *'
 jobs:
   build:
     runs-on: ubuntu-latest
@@ -20,11 +18,8 @@ jobs:
       - name: 'Install requirements'
         run: pip install -r ./requirements.txt 
         
-      - name: 'run jd_farm_help' 
-        run: python3 jd_farm_help.py 
+      - name: 'run 东东超市' 
+        run: python3 jd_superMarket.py 
         env:
             JD_COOKIE: ${{ secrets.JD_COOKIE }}
-
-      
-  
-     
+          
