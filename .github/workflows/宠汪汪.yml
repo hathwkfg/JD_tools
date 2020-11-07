@@ -1,8 +1,8 @@
 name: 宠汪汪
 
 on:
-#  schedule:
-#    - cron: '30 * * * * '
+   schedule:
+     - cron: 5 */3 * * * 
 #  watch:
 #    types: [started]
 jobs:
