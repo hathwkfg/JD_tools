@@ -57,7 +57,7 @@ def jingDetailList(cookies, page):
     return beanList
 
 
-def countTodayBean(cookies):
+def countTodayBean(cookies,_datatime):
     income = 0
     expense = 0
     page_1 = jingDetailList(cookies, 1)
@@ -79,18 +79,21 @@ def countTodayBean(cookies):
         expense += sum(expense_tmp)
     return income, expense
 
+def run():
+    utc_dt = datetime.utcnow()  # UTC时间
+    bj_dt = utc_dt+timedelta(hours=8)  # 北京时间
+    _datatime = bj_dt.strftime("%Y-%m-%d", )
+    now = bj_dt.strftime("%Y-%m-%d %H:%M:%S")
+    message = ""
+    for cookies in jdCookie.get_cookies():
+        total = totalBean(cookies)
+        income, expense = countTodayBean(cookies,_datatime)
+        message += f'\n\n【{cookies["pt_pin"]}】 \n当前京豆: {total} \n今日收入: +{income} \n今日支出: {expense}'
 
-utc_dt = datetime.utcnow()  # UTC时间
-bj_dt = utc_dt+timedelta(hours=8)  # 北京时间
-_datatime = bj_dt.strftime("%Y-%m-%d", )
-now = bj_dt.strftime("%Y-%m-%d %H:%M:%S")
-message = ""
-for cookies in jdCookie.get_cookies():
-    total = totalBean(cookies)
-    income, expense = countTodayBean(cookies)
-    message += f'\n\n【{cookies["pt_pin"]}】 \n当前京豆: {total} \n今日收入: +{income} \n今日支出: {expense}'
+        print("\n")
+    print(f"⏰ 京豆统计 {now}")
+    print(message)
+    notification.notify(f"⏰ 京豆统计 {now}", message)
 
-    print("\n")
-print(f"⏰ 京豆统计 {now}")
-print(message)
-notification.notify(f"⏰ 京豆统计 {now}", message)
+if __name__ == "__main__":
+    run()
