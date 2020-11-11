@@ -216,25 +216,25 @@ def desk(cookies):
         time.sleep(1)
 
 
-def reward(cookies):
-    print("\n【兑换京豆】")
-    response = requests.get('https://jdjoy.jd.com/gift/getHomeInfo',
-                            headers=headers_app, cookies=cookies)
-    result = response.json()
-    giftSaleInfos = result["data"]["levelSaleInfos"]["giftSaleInfos"]
-
-    jd_bean = [i for i in giftSaleInfos if i["giftType"] == "jd_bean"]
-    for i in jd_bean:
-        print(f'{i["giftName"]:6}  需要{i["salePrice"]}积分 ')
-        if i["leftStock"] == 0:
-            print(">>>>>库存不足")
-            continue
-        data = {
-            "orderSource": "pet", "saleInfoId": i["id"]
-        }
-        response = requests.post('https://jdjoy.jd.com/gift/exchange',
-                                 headers=headers_app, data=json.dumps(data), cookies=cookies)
-        print(response.text)
+＃ def reward(cookies):
+＃    print("\n【兑换京豆】")
+＃    response = requests.get('https://jdjoy.jd.com/gift/getHomeInfo',
+＃                            headers=headers_app, cookies=cookies)
+＃    result = response.json()
+＃    giftSaleInfos = result["data"]["levelSaleInfos"]["giftSaleInfos"]
+＃
+＃    jd_bean = [i for i in giftSaleInfos if i["giftType"] == "jd_bean"]
+＃    for i in jd_bean:
+＃        print(f'{i["giftName"]:6}  需要{i["salePrice"]}积分 ')
+＃        if i["leftStock"] == 0:
+＃           print(">>>>>库存不足")
+＃            continue
+＃       data = {
+＃           "orderSource": "pet", "saleInfoId": i["id"]
+＃       }
+＃       response = requests.post('https://jdjoy.jd.com/gift/exchange',
+＃                                 headers=headers_app, data=json.dumps(data), cookies=cookies)
+＃        print(response.text)
     
 def combat(cookies):
     if combat_flag == 0:
