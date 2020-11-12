@@ -289,7 +289,7 @@ for cookies in jdCookie.get_cookies():
     print("\n")
     print(f"""[ {cookies["pt_pin"]} ]""")
     takeTask(cookies)
-    reward(cookies)
+#    reward(cookies)
     ScanMarket_extra(cookies)
     enterRoom(cookies)
     desk(cookies)
