@@ -150,24 +150,24 @@ def _help(cookies, plantUuid):
                          "plantUuid": i, "followType": "1", "wxHeadImgUrl": "", "shareUuid": "", })
 
 
-def steal(cookies, roundId):
-    print("\n【偷取营养液】\n默认对方有3个才会偷取\n不足自动跳过 ")
-    result = functionTemplate(cookies, "plantFriendList", {"pageNum": "1"})
-
-    if "errorCode" in result:
-        return
-    if "tips" in result["data"]:
-        print("今日已达上限")
-        return
-    stealList = [i for i in result["data"]
-                 ["friendInfoList"] if "nutrCount" in i]
-
-    for i in stealList:
-        if int(i["nutrCount"]) == 3:  # 为3时才会偷取
-            print(i)
-            print(functionTemplate(cookies, "collectUserNutr", {
-                "paradiseUuid": i["paradiseUuid"], "roundId": roundId}))
-            time.sleep(2)
+# def steal(cookies, roundId):
+#    print("\n【偷取营养液】\n默认对方有3个才会偷取\n不足自动跳过 ")
+#    result = functionTemplate(cookies, "plantFriendList", {"pageNum": "1"})
+#
+#    if "errorCode" in result:
+#        return
+#    if "tips" in result["data"]:
+#        print("今日已达上限")
+#        return
+#    stealList = [i for i in result["data"]
+#                 ["friendInfoList"] if "nutrCount" in i]
+#
+#    for i in stealList:
+#        if int(i["nutrCount"]) == 3:  # 为3时才会偷取
+#            print(i)
+#            print(functionTemplate(cookies, "collectUserNutr", {
+#                "paradiseUuid": i["paradiseUuid"], "roundId": roundId}))
+#            time.sleep(2)
 
 
 def getReward(cookies, status,lastRoundId):
