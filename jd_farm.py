@@ -17,7 +17,8 @@ waterTimesLimit = 10  # 自定义的每天浇水最大次数
 retainWaterLimit = 100  # 完成10次浇水任务的基础上,希望水滴始终高于此数
 waterFriendLimit = 2  # [0,2]   0: 始终不替他人浇水   2: 替他人浇水2次以完成任务获得25水
 
-shareCodes = [     ]
+shareCodes = ["68b6bde7b6234dc3945bc49f1babd42e",
+             "ea86abe0ce3c482fad9c5babf63551f9"]
 
 
 def postTemplate(cookies, functionId, body):
