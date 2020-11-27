@@ -3,6 +3,7 @@ name: 宠汪汪
 on:
    schedule:
      - cron: 45 */3 * * * 
+   workflow_dispatch:
    repository_dispatch:
    
 jobs:
