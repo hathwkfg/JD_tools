@@ -3,6 +3,8 @@ name: 东东超市
 on:
   schedule:
     - cron: 0 4,10,16,22 * * *
+  workflow_dispatch:
+  repository_dispatch:    
 jobs:
   build:
     runs-on: ubuntu-latest
