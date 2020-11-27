@@ -11,8 +11,9 @@ import jdCookie
 2、cron 35 6-23 * * *
 """
 
-plantUuid = [
-             ]  # 填写别人的助力码
+plantUuid = ["oi3znsvg7mg7cabqo6eufvj5rjxl6xawogpghty",
+             "3aolqbq3mjp54fim6wqkmzsgt4"]   # 填写别人的助力码
+              
 
 def functionTemplate(cookies, functionId, body):
     headers = {
