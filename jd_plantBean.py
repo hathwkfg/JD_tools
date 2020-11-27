@@ -229,7 +229,7 @@ def run():
 
         egg(cookies)
         waterWheel(cookies,currentRoundId)
-        steal(cookies, currentRoundId)
+#        steal(cookies, currentRoundId)
         water(cookies,currentRoundId)
         getReward(cookies, roundList[0]["awardState"],lastRoundId)
         print("\nEND\n")
