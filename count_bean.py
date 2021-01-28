@@ -1,136 +1,307 @@
-import requests
-import json
 import jdCookie
-import re
-from datetime import datetime, timedelta
-import notification
+import json
+import requests
+import time
 
 """
-统计当天获得的京豆,当项目过多时,可能不全
-统计当前红包和即将过期红包
-cron 30 18 * * *
+
+宠汪汪
+1、FEED_NUM :自定义 每次喂养数量; 等级只和喂养次数有关，与数量无关
+2、cron 0 */3 * * *  jd_joy.py  #每隔三小时运行一次，加快升级
+3、自动兑换京豆
+4、佛系参加双人比赛、领取奖励
 """
 
+FEED_NUM = 10   # [10,20,40,80]
+combat_flag = 1  #自动参赛，取消置0
+teamLevel = 2  # 双人赛据说不需要门票
 
-def totalBean(cookies):
-    headers = {
-        'Host': 'wq.jd.com',
-        'Accept': 'application/json, text/plain, */*',
-        'Connection': 'keep-alive',
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
-        'Accept-Language': 'zh-cn',
-        'Referer': 'https://wqs.jd.com/my/jingdou/my.shtml?sceneval=2',
-        'Accept-Encoding': 'gzip, deflate, br',
-    }
+headers = {
+    'Content-Type': 'application/json',
+    'reqSource': 'weapp',
+    'Host': 'draw.jdfcloud.com',
+    'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148 MicroMessenger/7.0.14(0x17000e25) NetType/WIFI Language/zh_CN',
+}
+headers_app = {
+    'Host': 'jdjoy.jd.com',
+    'Content-Type': 'application/json',
+    'reqSource': 'h5',
+    'Connection': 'keep-alive',
+    'Accept': '*/*',
+    'User-Agent': 'jdapp;iPhone;9.0.6;13.6;Mozilla/5.0 (iPhone; CPU iPhone OS 13_6 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Mobile/15E148;supportJDSHWK/1',
+    'Referer': 'https://jdjoy.jd.com/pet/index?un_area=2_2823_51974_0&lng=0&lat=0',
+    'Accept-Language': 'zh-cn',
+    'Accept-Encoding': 'gzip, deflate, br',
+}
 
-    params = (
-        ('sceneid', '80027'),
-        ('sceneval', '2'),
-        ('callback', 'getUserInfoCb'),
-    )
 
-    response = requests.get('https://wq.jd.com/user/info/QueryJDUserInfo',
+def getTemplate(cookies, functionId, params):
+    params += (('reqSource', 'weapp'),)
+    response = requests.get(f'https://draw.jdfcloud.com//pet/{functionId}',
                             headers=headers, params=params, cookies=cookies)
-    result = response.text
-    regex = r"\"jdNum\" : (\d+)"
-    matches = re.findall(regex, result, re.MULTILINE)
-    if matches:
-        return matches[0]
-    return None
+    return response.json()
 
 
-def jingDetailList(cookies, page):
-    headers = {
-        'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8',
-        'Origin': 'https://bean.m.jd.com',
-        'Host': 'bean.m.jd.com',
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_0_1 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0 Mobile/15E148 Safari/604.1',
-        'Referer': 'https://bean.m.jd.com/beanDetail/index.action?resourceValue=bean',
-        'X-Requested-With': 'XMLHttpRequest',
-    }
-    data = {'page': str(page)}
-    response = requests.post('https://bean.m.jd.com/beanDetail/detail.json',
+def postTemplate(cookies, functionId, data):
+    headers["Content-Type"] = "application/x-www-form-urlencoded"
+    response = requests.post(f'https://draw.jdfcloud.com//pet/{functionId}',
                              headers=headers, cookies=cookies, data=data)
-    result = response.json()
-    if not result:
-        return []
-    beanList = result["jingDetailList"]
-    return beanList
+    return response.json()
 
 
-def countTodayBean(cookies,_datatime):
-    income = 0
-    expense = 0
-    page_1 = jingDetailList(cookies, 1)
-    todayBeanList = [int(i["amount"])
-                     for i in page_1 if _datatime in i["date"]]
-    income_tmp = [i for i in todayBeanList if i > 0]
-    expense_tmp = [i for i in todayBeanList if i < 0]
-    income += sum(income_tmp)
-    expense += sum(expense_tmp)
-    page = 1
-    while(len(page_1) == len(todayBeanList)):
-        page += 1
-        page_1 = jingDetailList(cookies, page)
-        todayBeanList = [int(i["amount"])
-                         for i in page_1 if _datatime in i["date"]]
-        income_tmp = [i for i in todayBeanList if i > 0]
-        expense_tmp = [i for i in todayBeanList if i < 0]
-        income += sum(income_tmp)
-        expense += sum(expense_tmp)
-    return income, expense
+def postTemplate2(cookies, functionId, data):
+    headers["Content-Type"] = "application/json"
+    response = requests.post(f'https://draw.jdfcloud.com//pet/{functionId}',
+                             headers=headers, cookies=cookies, data=json.dumps(data))
+    return response.json()
 
-def red(cookies):
-    headers = {
-        'Host': 'wq.jd.com',
-        'Accept': '*/*',
-        'Connection': 'keep-alive',
-        'User-Agent': 'Mozilla/5.0 (iPhone; CPU iPhone OS 14_2 like Mac OS X) AppleWebKit/605.1.15 (KHTML, like Gecko) Version/14.0.1 Mobile/15E148 Safari/604.1',
-        'Accept-Language': 'zh-cn',
-        'Referer': 'https://wqs.jd.com/my/redpacket.shtml',
-        'Accept-Encoding': 'gzip, deflate, br',
-    }
 
+def enterRoom(cookies):
+    print("\n【喂养状态】")
+    """
+    进入房间；喂养后刷新
+    """
     params = (
-        ('channel', '3'),
-        ('type', '1'),
-        ('page', '0'),
-        ('pageSize', '100'),
-        ('orgFlag', 'JD_PinGou_New'),
-        ('expiredRedFlag', '1'),
-        ('sceneval', '2'),
-        ('g_login_type', '1'),
-        ('g_ty', 'ls'),
+        ('reqSource', 'h5'),
+        ('invitePin', ''),
     )
 
-    response = requests.get('https://wq.jd.com/user/info/QueryUserRedEnvelopes',
-                            headers=headers, params=params, cookies=cookies)
-    try:
-        result = response.json()
-        data = result["data"]
-    except:
-        print("❌红包数据返回错误")
-        return None, None
-    balance = data["balance"]
-    expiredBalance = data["expiredBalance"]
-    return balance, expiredBalance
+    data1 = '{}'
+    response = requests.post('https://jdjoy.jd.com/pet/enterRoom/h5',
+                             headers=headers, params=params, cookies=cookies, data=data1)
+    data = response.json()["data"]
+    petFood = data["petFood"]
+    feedCount = data["feedCount"]
+    petLevel = data["petLevel"]
+    print(
+        f"""  
+现有积分: {data["petCoin"]}
+现有狗粮: {petFood}
+喂养次数: {feedCount}
+宠物等级: {petLevel}
+        """
+    )
+    print("\n【bubble】")
+    if not data["bubbleOpen"]:
+        print("暂无")
+    else:
+        print("getBubbleReward  todo")  # TODO
+        print(data["bubbleReward"])
+        time.sleep(1)
+        print(postTemplate(cookies, "getBubbleReward", data["bubbleReward"]))
+        print(postTemplate2(cookies, "getBubbleReward", data["bubbleReward"]))
+
+
+def feed(cookies, feedCount):
+    data = getTemplate(cookies, "feed", (('feedCount', str(feedCount)),))
+    print("\n【feed】\n ", data["errorCode"])
+
+
+def takeTask(cookies):
+    datas = getTemplate(cookies, "getPetTaskConfig", ())["datas"]
+    print("\n任务      进度")
+    print("--"*10)
+    for i in datas:
+        if not i["joinedCount"]:
+            i["joinedCount"] = 0
+        print(f"""{i["taskName"]}  {i["joinedCount"]}/{i["taskChance"]}""")
+
+        if i["receiveStatus"] == "chance_full":
+            continue
+        if i["receiveStatus"] == "unreceive":
+            print(getTemplate(cookies, "getFood",
+                              (('taskType', i["taskType"]),)))
+
+        if i["taskType"] == "SignEveryDay":  # 每日签到
+            if i["receiveStatus"] == "chance_left":
+                print("     >>>>>需要手动签到")
+                # print(getTemplate(cookies, "sign", (('taskType', 'SignEveryDay'),)))
+
+        if i["taskType"] == "FollowShop":  # 关注店铺
+            shopIDs = [j["shopId"]
+                       for j in i["followShops"] if not j["status"]]
+            print(shopIDs)
+            for shopId in shopIDs:
+                # print(shopId)
+                time.sleep(0.5)
+                print(postTemplate(cookies, "followShop", {"shopId": shopId}))
+                time.sleep(1)
+
+        if i["taskType"] == "ScanMarket":  # 逛逛会场
+            marketLists = [j["marketLink"]
+                           for j in i["scanMarketList"] if not j["status"]]
+            for addr in marketLists:
+                data = {"marketLink": str(
+                    addr), "taskType": "ScanMarket", "reqSource": "weapp"}
+                print(postTemplate2(cookies, "scan", data))
+                time.sleep(1)
+
+        if i["taskType"] == "FollowChannel":  # 关注频道
+            lists = [j["channelId"]
+                     for j in i["followChannelList"] if not j["status"]]
+            for addr in lists:
+                data = {"channelId": str(
+                    addr), "taskType": "FollowChannel", "reqSource": "weapp"}
+                print(postTemplate2(cookies, "scan", data))
+                time.sleep(1)
+
+        if i["taskType"] == "ViewVideo":  # 激励视频
+            for j in range(i["taskChance"]-i["joinedCount"]):
+                print(f"""观看视频 [{j}]""")
+                print(postTemplate(cookies, "scan", {
+                      'taskType': "ViewVideo", 'reqSource': 'weapp'}))
+                time.sleep(1)
+                print(postTemplate2(cookies, "scan", {
+                      'taskType': "ViewVideo", 'reqSource': 'weapp'}))
+
+        if i["taskType"] == "FollowGood":  # 关注商品
+            skus = [j["sku"] for j in i["followGoodList"] if not j["status"]]
+            print(skus)
+            for sku in skus:
+                print(postTemplate(cookies, "followGood",
+                                   {'sku': str(sku)}))   # bug
+                print(postTemplate2(cookies, "followGood", {'sku': str(sku)}))
+       
+        if i["taskType"] == "PlayWeapp":   # 体验小程序
+            appIds = [j["appId"] for j in i["weAppList"] if not j["status"]]
+            for appId in appIds:
+                print(postTemplate(cookies, "scan", {
+                      'appId': str(appId), "taskType": "PlayWeapp"}))
+
+
+def ScanMarket_extra(cookies):
+    """
+    补充app端的ScanMarket额外任务
+    """
+    params = (
+        ('reqSource', 'h5'),
+        ('taskType', 'ScanMarket'),
+    )
+
+    response = requests.get('https://jdjoy.jd.com/pet/getPetTaskConfig',
+                            headers=headers_app, params=params, cookies=cookies)
+    datas = response.json()["datas"][0]
+    if datas["receiveStatus"] == "chance_full":
+        return
+    if datas["receiveStatus"] == "chance_left":
+        print("额外任务")
+        marketLists = [j["marketLinkH5"]
+                       for j in datas["scanMarketList"] if not j["status"]]
+        for addr in marketLists:
+            data = {"marketLink": str(
+                    addr), "taskType": "ScanMarket", "reqSource": "h5"}
+            response = requests.post(
+                'https://jdjoy.jd.com/pet/scan', headers=headers, cookies=cookies, data=json.dumps(data))
+            print(response.text)
+            time.sleep(1)
+
+
+def desk(cookies):
+    print("\n 【限时货柜】")
+    response = requests.get('https://jdjoy.jd.com/pet/getDeskGoodDetails',
+                            headers=headers_app, cookies=cookies)
+    result = response.json()
+    # print(result)
+    deskGoods = result["data"]["deskGoods"]
+    if not deskGoods:
+        print("活动下线")
+        return
+    followCount = result["data"]["followCount"]
+    taskChance = result["data"]["taskChance"]
+    print(f""" {followCount}/{taskChance}""")
+    if followCount == None:
+        followCount = 0
+    tt = [i["sku"]
+          for i in deskGoods if not i["status"]][:(taskChance-followCount)]
+    if len(tt) == 0:
+        return
+    for i in tt:
+        data = f"""{{"taskType":"ScanDeskGood","reqSource":"h5","sku":"{i}"}}"""
+        response = requests.post('https://jdjoy.jd.com/pet/scan',
+                                 headers=headers_app, data=data, cookies=cookies)
+        print(response.text)
+        time.sleep(1)
+
+
+def reward(cookies):
+    print("\n【兑换京豆】")
+    response = requests.get('https://jdjoy.jd.com/gift/getHomeInfo',
+                            headers=headers_app, cookies=cookies)
+    result = response.json()
+    giftSaleInfos = result["data"]["levelSaleInfos"]["giftSaleInfos"]
+
+    jd_bean = [i for i in giftSaleInfos if i["giftType"] == "jd_bean"]
+    for i in jd_bean:
+        print(f'{i["giftName"]:6}  需要{i["salePrice"]}积分 ')
+        if i["leftStock"] == 0:
+            print(">>>>>库存不足")
+            continue
+        data = {
+            "orderSource": "pet", "saleInfoId": i["id"]
+        }
+        response = requests.post('https://jdjoy.jd.com/gift/exchange',
+                                 headers=headers_app, data=json.dumps(data), cookies=cookies)
+        print(response.text)
+    
+def combat(cookies):
+    if combat_flag == 0:
+        return
+    print("\n【宠物赛跑】")
+    data = getTemplate(
+        cookies, "combat/detail/v2", (("help", "false"),))["data"]
+    # print(data)
+    petRaceResult = data["petRaceResult"]
+    print(petRaceResult)
+    if petRaceResult == "unbegin":
+        print("比赛还未开始")
+        return
+    if petRaceResult == "time_over":
+        print("比赛已结束，明早9点再来哦")
+        return
+    if petRaceResult == "unreceive":
+        print("领取奖励")
+        response = requests.get(f'https://jdjoy.jd.com/pet/combat/receive',
+                                headers=headers, cookies=cookies)
+        print(response.text)
+        return
+    if petRaceResult == "participate":
+        print("===比赛排行榜===")
+
+        def f(status):
+            if status:
+                return "(myself)"
+            return " "
+        for i in data["raceUsers"]:
+            print(
+                f"""{i["rank"]} --- {i["distance"]} -- {i["nickName"]}    {f(i["myself"])} """)
+        result = requests.get(f'https://jdjoy.jd.com/pet/combat/getBackupInfo',
+                              headers=headers, cookies=cookies).json()["data"]
+        print("\n===应援团===")
+        backupList = result["backupList"]
+        if backupList:
+            ii = [i["nickName"] for i in backupList]
+            print(ii)
+    if petRaceResult == "not_participate":
+        print("准备参赛")
+        data = requests.get(f'https://jdjoy.jd.com/pet/combat/match?teamLevel={teamLevel}',
+                            headers=headers, cookies=cookies)
+        print(data.text)
+        time.sleep(5)  # 5秒延迟，多账号可能匹配到自己
 
 def run():
-    utc_dt = datetime.utcnow()  # UTC时间
-    bj_dt = utc_dt+timedelta(hours=8)  # 北京时间
-    _datatime = bj_dt.strftime("%Y-%m-%d", )
-    now = bj_dt.strftime("%Y-%m-%d %H:%M:%S")
-    message = ""
     for cookies in jdCookie.get_cookies():
-        total = totalBean(cookies)
-        balance, expiredBalance = red(cookies)
-        income, expense = countTodayBean(cookies,_datatime)
-        message += f'\n\n【{cookies["pt_pin"]}】 \n当前京豆: {total} \n今日收入: {income} \n今日支出: {expense}\n红包合计: {balance}元 \n即将过期: {expiredBalance}元'
-        print("\n")
-    print(f"⏰ 京豆统计 {now}")
-    message+="\n\n\n[注] 即将过期指 过了零点就会失效"
-    print(message)
-    notification.notify(f"⏰ 京豆统计 {now}", message)
+        feed(cookies, FEED_NUM)
+        
 
+    for cookies in jdCookie.get_cookies():
+        print("\n")
+        print(f"""[ {cookies["pt_pin"]} ]""")
+        takeTask(cookies)
+        reward(cookies)
+        ScanMarket_extra(cookies)
+        enterRoom(cookies)
+        desk(cookies)
+        combat(cookies)
+        print("##"*25)
 if __name__ == "__main__":
     run()
